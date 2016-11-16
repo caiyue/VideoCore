@@ -95,10 +95,6 @@ namespace videocore { namespace simpleApi {
     VCPreviewView* _previewView;
 
     std::shared_ptr<videocore::simpleApi::PixelBufferOutput> m_pbOutput;
-    // 麦克风Source
-    std::shared_ptr<videocore::iOS::MicSource>               m_micSource;
-    // 摄像头Source
-    std::shared_ptr<videocore::iOS::CameraSource>            m_cameraSource;
     // 是接收图片的Source
     std::shared_ptr<videocore::Apple::PixelBufferSource>     m_pixelBufferSource;
     std::shared_ptr<videocore::AspectTransform>              m_pbAspect;

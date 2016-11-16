@@ -34,6 +34,16 @@
 #import <AVFoundation/AVFoundation.h>
 #import <UIKit/UIKit.h>
 
+#ifdef __APPLE__
+#   ifdef TARGET_OS_IPHONE
+#       include <videocore/sources/iOS/CameraSource.h>
+#       include <videocore/sources/iOS/MicSource.h>
+#   else /* OS X */
+#   endif
+#else
+#   include <videocore/mixers/GenericAudioMixer.h>
+#endif
+
 @class VCSimpleSession;
 
 typedef NS_ENUM(NSInteger, VCSessionState)
@@ -89,8 +99,11 @@ typedef NS_ENUM(NSInteger, VCConnectionQuality) {
 - (void) detectedThroughput: (NSInteger) throughputInBytesPerSecond videoRate:(NSInteger) rate audioRate:(NSInteger)aRate insBytesPerSecond:(NSInteger)insBytesPerSecond;
 @end
 
-@interface VCSimpleSession : NSObject
-
+@interface VCSimpleSession : NSObject {
+@public
+    std::shared_ptr<videocore::iOS::CameraSource> m_cameraSource;
+    std::shared_ptr<videocore::iOS::MicSource> m_micSource;
+}
 @property (nonatomic, readonly) VCSessionState rtmpSessionState;
 @property (nonatomic, strong, readonly) UIView* previewView;
 
