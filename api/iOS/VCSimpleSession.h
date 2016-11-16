@@ -83,8 +83,10 @@ typedef NS_ENUM(NSInteger, VCConnectionQuality) {
 - (void) didChangeConnectionQuality:(VCConnectionQuality)connectionQuality;
 - (void) didAddCameraSource:(VCSimpleSession*)session;
 
-- (void) detectedThroughput: (NSInteger) throughputInBytesPerSecond; //Depreciated, should use method below
+//Depreciated, should use method below
+- (void) detectedThroughput: (NSInteger) throughputInBytesPerSecond;
 - (void) detectedThroughput: (NSInteger) throughputInBytesPerSecond videoRate:(NSInteger) rate;
+- (void) detectedThroughput: (NSInteger) throughputInBytesPerSecond videoRate:(NSInteger) rate audioRate:(NSInteger)aRate insBytesPerSecond:(NSInteger)insBytesPerSecond;
 @end
 
 @interface VCSimpleSession : NSObject
@@ -103,6 +105,7 @@ typedef NS_ENUM(NSInteger, VCConnectionQuality) {
 @property (nonatomic, assign) float         videoZoomFactor;
 @property (nonatomic, assign) int           audioChannelCount;
 @property (nonatomic, assign) float         audioSampleRate;
+// 麦克风增益
 @property (nonatomic, assign) float         micGain;        // [0..1]
 @property (nonatomic, assign) CGPoint       focusPointOfInterest;   // (0,0) is top-left, (1,1) is bottom-right
 @property (nonatomic, assign) CGPoint       exposurePointOfInterest;

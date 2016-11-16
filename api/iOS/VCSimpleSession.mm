@@ -58,6 +58,8 @@
 #include <sstream>
 #import <AVFoundation/AVFoundation.h>
 
+static const int kUsingEnbededVideoSource = 0;
+static const int kUsingEnbededAudioSource = 0;
 
 static const int kMinVideoBitrate = 32000;
 static const int kMaxBufferedDuration = 15;
@@ -93,8 +95,11 @@ namespace videocore { namespace simpleApi {
     VCPreviewView* _previewView;
 
     std::shared_ptr<videocore::simpleApi::PixelBufferOutput> m_pbOutput;
+    // 麦克风Source
     std::shared_ptr<videocore::iOS::MicSource>               m_micSource;
+    // 摄像头Source
     std::shared_ptr<videocore::iOS::CameraSource>            m_cameraSource;
+    // 是接收图片的Source
     std::shared_ptr<videocore::Apple::PixelBufferSource>     m_pixelBufferSource;
     std::shared_ptr<videocore::AspectTransform>              m_pbAspect;
     std::shared_ptr<videocore::PositionTransform>            m_pbPosition;
@@ -118,7 +123,7 @@ namespace videocore { namespace simpleApi {
 
 
     // properties
-
+    // 将所有的控制都在一个线程中处理以避免多线程引起的不稳定
     dispatch_queue_t _graphManagementQueue;
 
     CGSize _videoSize;
@@ -149,11 +154,15 @@ namespace videocore { namespace simpleApi {
     VCFilter _filter;
 }
 @property (nonatomic, readwrite)    VCSessionState              rtmpSessionState;
+// 文件记录保存位置
 @property (nonatomic, copy)         NSString                    *filePath;
+// 文件记录器
 @property (nonatomic, strong)       VCWriter                    *writer;
+//
 @property (nonatomic, strong)       AVCaptureSession            *captureSession;
-
+// 建立采集和播放回路
 - (void) setupGraph;
+// 建立文件记录
 - (void) setupWriter;
 
 @end
@@ -227,7 +236,9 @@ namespace videocore { namespace simpleApi {
 {
     _orientationLocked = orientationLocked;
     if(m_cameraSource) {
-        m_cameraSource->setOrientationLocked(orientationLocked);
+        if(kUsingEnbededVideoSource) {
+            m_cameraSource->setOrientationLocked(orientationLocked);
+        }
     }
 }
 - (BOOL) torch
@@ -237,7 +248,9 @@ namespace videocore { namespace simpleApi {
 - (void) setTorch:(BOOL)torch
 {
     if(m_cameraSource) {
-        _torch = m_cameraSource->setTorch(torch);
+        if(kUsingEnbededVideoSource) {
+            _torch = m_cameraSource->setTorch(torch);
+        }
     }
 }
 - (VCCameraState) cameraState
@@ -263,7 +276,9 @@ namespace videocore { namespace simpleApi {
     if(_cameraState != cameraState) {
         _cameraState = cameraState;
         if(m_cameraSource) {
-            m_cameraSource->toggleCamera();
+            if(kUsingEnbededVideoSource) {
+                m_cameraSource->toggleCamera();
+            }
         }
     }
 }
@@ -309,7 +324,9 @@ namespace videocore { namespace simpleApi {
     _audioChannelCount = MAX(1, MIN(channelCount, 2));
 
     if(m_audioMixer) {
-        m_audioMixer->setChannelCount(_audioChannelCount);
+        if( kUsingEnbededAudioSource ) {
+            m_audioMixer->setChannelCount(_audioChannelCount);
+        }
     }
 }
 - (int) audioChannelCount
@@ -321,7 +338,9 @@ namespace videocore { namespace simpleApi {
 
     _audioSampleRate = (sampleRate > 33075 ? 44100 : 22050); // We can only support 44100 / 22050 with AAC + RTMP
     if(m_audioMixer) {
-        m_audioMixer->setFrequencyInHz(sampleRate);
+        if( kUsingEnbededAudioSource ) {
+            m_audioMixer->setFrequencyInHz(sampleRate);
+        }
     }
 }
 - (float) audioSampleRate
@@ -331,7 +350,9 @@ namespace videocore { namespace simpleApi {
 - (void) setMicGain:(float)micGain
 {
     if(m_audioMixer) {
-        m_audioMixer->setSourceGain(m_micSource, micGain);
+        if( kUsingEnbededAudioSource ) {
+            m_audioMixer->setSourceGain(m_micSource, micGain);
+        }
         _micGain = micGain;
     }
 }
@@ -341,14 +362,21 @@ namespace videocore { namespace simpleApi {
 }
 
 - (UIView*) previewView {
-    return _previewView;
+    if( kUsingEnbededVideoSource ) {
+        return _previewView;
+    }
+    else {
+        return nil;
+    }
 }
 
 - (void) setContinuousAutofocus:(BOOL)continuousAutofocus
 {
     _continuousAutofocus = continuousAutofocus;
     if( m_cameraSource ) {
-        m_cameraSource->setContinuousAutofocus(continuousAutofocus);
+        if(kUsingEnbededVideoSource) {
+            m_cameraSource->setContinuousAutofocus(continuousAutofocus);
+        }
     }
 }
 - (BOOL) continuousAutofocus {
@@ -358,7 +386,9 @@ namespace videocore { namespace simpleApi {
 {
     _continuousExposure = continuousExposure;
     if(m_cameraSource) {
-        m_cameraSource->setContinuousExposure(continuousExposure);
+        if(kUsingEnbededVideoSource) {
+            m_cameraSource->setContinuousExposure(continuousExposure);
+        }
     }
 }
 
@@ -366,7 +396,9 @@ namespace videocore { namespace simpleApi {
     _focusPOI = focusPointOfInterest;
 
     if(m_cameraSource) {
-        m_cameraSource->setFocusPointOfInterest(focusPointOfInterest.x, focusPointOfInterest.y);
+        if(kUsingEnbededVideoSource) {
+            m_cameraSource->setFocusPointOfInterest(focusPointOfInterest.x, focusPointOfInterest.y);
+        }
     }
 }
 - (CGPoint) focusPointOfInterest {
@@ -376,7 +408,9 @@ namespace videocore { namespace simpleApi {
 {
     _exposurePOI = exposurePointOfInterest;
     if(m_cameraSource) {
-        m_cameraSource->setExposurePointOfInterest(exposurePointOfInterest.x, exposurePointOfInterest.y);
+        if(kUsingEnbededVideoSource) {
+            m_cameraSource->setExposurePointOfInterest(exposurePointOfInterest.x, exposurePointOfInterest.y);
+        }
     }
 }
 - (CGPoint) exposurePointOfInterest {
@@ -498,7 +532,9 @@ namespace videocore { namespace simpleApi {
     self.useAdaptiveBitrate = NO;
     self.aspectMode = aspectMode;
 
-    _previewView = [[VCPreviewView alloc] init];
+    if( kUsingEnbededVideoSource ) {
+        _previewView = [[VCPreviewView alloc] init];
+    }
     self.videoZoomFactor = 1.f;
 
     _cameraState = cameraState;
@@ -528,8 +564,10 @@ namespace videocore { namespace simpleApi {
     m_micSource.reset();
     m_cameraSource.reset();
     m_pbOutput.reset();
-    [_previewView release];
-    _previewView = nil;
+    if( kUsingEnbededVideoSource ) {
+        [_previewView release];
+        _previewView = nil;
+    }
 
     dispatch_release(_graphManagementQueue);
 
@@ -608,15 +646,27 @@ namespace videocore { namespace simpleApi {
                                               bSelf->_estimatedThroughput = predicted;
                                               auto video = std::dynamic_pointer_cast<videocore::IEncoder>( bSelf->m_h264Encoder );
                                               auto audio = std::dynamic_pointer_cast<videocore::IEncoder>( bSelf->m_aacEncoder );
+                                              
+                                              if( nil == video || nil == audio ) {
+                                                  return;
+                                              }
+                                              
+                                              if ([bSelf.delegate respondsToSelector:@selector(detectedThroughput:)]) {
+                                                  [bSelf.delegate detectedThroughput:predicted];
+                                              }
+                                              if ([bSelf.delegate respondsToSelector:@selector(detectedThroughput:videoRate:)]) {
+                                                  [bSelf.delegate detectedThroughput:predicted videoRate:video->bitrate()];
+                                              }
+                                              if ([bSelf.delegate respondsToSelector:@selector(detectedThroughput:videoRate:insBytesPerSecond:)]) {
+                                                  [bSelf.delegate detectedThroughput:predicted videoRate:video->bitrate() insBytesPerSecond:inst];
+                                              }
+                                              
+                                              if ([bSelf.delegate respondsToSelector:@selector(detectedThroughput:videoRate:audioRate:insBytesPerSecond:)]) {
+                                                  [bSelf.delegate detectedThroughput:predicted videoRate:video->bitrate() audioRate:audio->bitrate()insBytesPerSecond:inst];
+                                              }
+                                              
+                                              
                                               if(video && audio && bSelf.useAdaptiveBitrate) {
-
-                                                  if ([bSelf.delegate respondsToSelector:@selector(detectedThroughput:)]) {
-                                                      [bSelf.delegate detectedThroughput:predicted];
-                                                  }
-                                                  if ([bSelf.delegate respondsToSelector:@selector(detectedThroughput:videoRate:)]) {
-                                                      [bSelf.delegate detectedThroughput:predicted videoRate:video->bitrate()];
-                                                  }
-
 
                                                   int videoBr = 0;
 
@@ -694,8 +744,9 @@ namespace videocore { namespace simpleApi {
     });
     
     _bitrate = _bpsCeiling;
-    
-    self.writer.paused = YES;
+    if(self.writer) {
+        self.writer.paused = YES;
+    }
     self.rtmpSessionState = VCSessionStatePaused;
 }
 
@@ -703,7 +754,9 @@ namespace videocore { namespace simpleApi {
                        andStreamKey:(NSString *)streamKey
 {
     [self startRtmpSessionWithURL:rtmpUrl andStreamKey:streamKey];
-    self.writer.paused = NO;
+    if(self.writer) {
+        self.writer.paused = NO;
+    }
 }
 
 - (void) endRtmpSession {
@@ -711,13 +764,16 @@ namespace videocore { namespace simpleApi {
 }
 
 - (void) endRtmpSessionWithCompletionHandler:(void(^)(void))handler {
-    [self.writer finishWritingWithCompletionHandler:^{
-        self.filePath = nil;
-        self.writer = nil;
-        if (handler) {
-            handler();
-        }
-    }];
+    
+    if(self.writer) {
+        [self.writer finishWritingWithCompletionHandler:^{
+            self.filePath = nil;
+            self.writer = nil;
+            if (handler) {
+                handler();
+            }
+        }];
+    }
     
     dispatch_async(_graphManagementQueue, ^{
         m_h264Packetizer.reset();
@@ -845,11 +901,17 @@ namespace videocore { namespace simpleApi {
         auto videoSplit = std::make_shared<videocore::Split>();
 
         m_videoSplit = videoSplit;
-        VCPreviewView* preview = (VCPreviewView*)self.previewView;
-
+        VCPreviewView* preview = nil;
+        
+        if(kUsingEnbededVideoSource) {
+            preview = (VCPreviewView*)self.previewView;
+        }
         m_pbOutput = std::make_shared<videocore::simpleApi::PixelBufferOutput>([=](const void* const data, size_t size){
-            CVPixelBufferRef ref = (CVPixelBufferRef)data;
-            [preview drawFrame:ref];
+            
+            if(kUsingEnbededVideoSource) {
+                CVPixelBufferRef ref = (CVPixelBufferRef)data;
+                [preview drawFrame:ref];
+            }
             if(self.rtmpSessionState == VCSessionStateNone) {
                 self.rtmpSessionState = VCSessionStatePreviewStarted;
             }
@@ -869,7 +931,6 @@ namespace videocore { namespace simpleApi {
     {
         // Add camera source
         m_cameraSource = std::make_shared<videocore::iOS::CameraSource>();
-        m_cameraSource->setOrientationLocked(self.orientationLocked);
         auto aspectTransform = std::make_shared<videocore::AspectTransform>(self.videoSize.width,self.videoSize.height,m_aspectMode);
 
         auto positionTransform = std::make_shared<videocore::PositionTransform>(self.videoSize.width/2, self.videoSize.height/2,
@@ -877,10 +938,12 @@ namespace videocore { namespace simpleApi {
                                                                                 self.videoSize.width, self.videoSize.height
                                                                                 );
 
-
-        m_cameraSource->setup(session, self.fps, (self.cameraState == VCCameraStateFront), self.useInterfaceOrientation);
-        m_cameraSource->setContinuousAutofocus(true);
-        m_cameraSource->setContinuousExposure(true);
+        if(kUsingEnbededVideoSource) {
+            m_cameraSource->setOrientationLocked(self.orientationLocked);
+            m_cameraSource->setup(self.captureSession, self.fps, (self.cameraState == VCCameraStateFront), self.useInterfaceOrientation);
+            m_cameraSource->setContinuousAutofocus(true);
+            m_cameraSource->setContinuousExposure(true);
+        }
         
         m_cameraSource->setOutput(aspectTransform);
         
@@ -899,7 +962,7 @@ namespace videocore { namespace simpleApi {
     {
         // Add mic source
         m_micSource = std::make_shared<videocore::iOS::MicSource>();
-        m_micSource->setup(session, self.audioSampleRate, self.audioChannelCount);
+        m_micSource->setup(self.captureSession, self.audioSampleRate, self.audioChannelCount);
         m_micSource->setOutput(m_audioMixer);
 
         const auto epoch = std::chrono::steady_clock::now();
@@ -911,7 +974,7 @@ namespace videocore { namespace simpleApi {
         m_videoMixer->start();
     }
     
-    [session startRunning];
+    [self.captureSession startRunning];
 }
 - (void) addEncodersAndPacketizers
 {

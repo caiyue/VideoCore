@@ -118,6 +118,7 @@ namespace videocore { namespace iOS {
         /*! Used by Objective-C Device/Interface Orientation Notifications */
         void reorientCamera();
         void bufferCaptured(CMSampleBufferRef sampleBuffer);
+        void bufferCaptured(CVPixelBufferRef pixelBufferRef);
         bool isConnectionForCurrentInput(AVCaptureConnection *connection);
         
     protected:

@@ -102,17 +102,21 @@ namespace videocore { namespace iOS {
     void CameraSource::setupCaptureSessionConnections() {
         NSMutableArray *inputs = [NSMutableArray array];
         
+        // 得到前置摄像头设备对象
         id input = setupCaptureInputWithCameraPosition(AVCaptureDevicePositionFront);
         [inputs addObject:input];
         
+        // 得到后置摄像头设备对象
         input = setupCaptureInputWithCameraPosition(AVCaptureDevicePositionBack);
         [inputs addObject:input];
         
+        // 使用block方式将后置摄像头加入到CaptureSession中
         addCaptureInput(input);
         setCaptureInput(input);
 
         setInputs([[inputs copy] autorelease]);
         
+        // 将 AVCaptureVideoDataOutput 加入到输出中
         setupCaptureOutput();
         
         reorientCamera();
@@ -333,6 +337,24 @@ namespace videocore { namespace iOS {
             
             pixelBuffer->setState(kVCPixelBufferStateEnqueued);
             output->pushBuffer((uint8_t*)&pixelBuffer, sizeof(pixelBuffer), md);
+        }
+    }
+    
+    void
+    CameraSource::bufferCaptured(CVPixelBufferRef pixelBufferRef)
+    {
+        auto output = m_output.lock();
+        if(output) {
+            
+            VideoBufferMetadata md(1.f / float(m_fps));
+            
+            md.setData(1, m_matrix, false, shared_from_this());
+            
+            auto pixelBuffer = std::make_shared<Apple::PixelBuffer>(pixelBufferRef, true);
+            
+            pixelBuffer->setState(kVCPixelBufferStateEnqueued);
+            output->pushBuffer((uint8_t*)&pixelBuffer, sizeof(pixelBuffer), md);
+            
         }
     }
     
