@@ -59,7 +59,7 @@
 #import <AVFoundation/AVFoundation.h>
 
 static const int kUsingEnbededVideoSource = 0;
-static const int kUsingEnbededAudioSource = 0;
+static const int kUsingEnbededAudioSource = 1;
 
 static const int kMinVideoBitrate = 32000;
 static const int kMaxBufferedDuration = 15;
@@ -958,7 +958,9 @@ namespace videocore { namespace simpleApi {
     {
         // Add mic source
         m_micSource = std::make_shared<videocore::iOS::MicSource>();
-        m_micSource->setup(self.captureSession, self.audioSampleRate, self.audioChannelCount);
+        if( kUsingEnbededAudioSource ) {
+            m_micSource->setup(self.captureSession, self.audioSampleRate, self.audioChannelCount);
+        }
         m_micSource->setOutput(m_audioMixer);
 
         const auto epoch = std::chrono::steady_clock::now();
