@@ -40,7 +40,7 @@
 
 namespace videocore
 {
-    static const size_t kMaxSendbufferSize = 1024 * 1024 / 2; // was 10 MB - 5 minutes, now - 15 seconds
+    static const size_t kMaxSendbufferSize = 128 * 1024;
     
     RTMPSession::RTMPSession(std::string uri, RTMPSessionStateCallback callback)
     : m_streamOutRemainder(65536)
@@ -273,8 +273,6 @@ namespace videocore
             size_t maxlen = m_streamInBuffer->availableSpace();
             if (maxlen > 0) {
                 ssize_t len = m_streamSession->read(m_streamInBuffer->writeBuffer(), maxlen);
-                DLogVerbose("Want read:%zd, read:%zd\n", maxlen, len);
-                
                 if (len <= 0) {
                     DLogError("Read from stream error:%ld\n", len);
                     stop2 = true;
@@ -727,7 +725,6 @@ namespace videocore
     RTMPSession::handleMessage(uint8_t *p, uint8_t msgTypeId)
     {
         bool ret = true;
-        DLogDebug("Handle message:%d\n", (int)msgTypeId);
         switch(msgTypeId) {
             case RTMP_PT_BYTES_READ:
             {
@@ -764,7 +761,7 @@ namespace videocore
                 
             case RTMP_PT_INVOKE:
             {
-                DLog("Received invoke\n");
+                // DLog("Received invoke\n");
                 handleInvoke(p);
             }
                 break;
@@ -838,8 +835,6 @@ namespace videocore
     bool
     RTMPSession::parseCurrentData()
     {
-        //        Logger::dumpBuffer("dataReceived", m_streamInBuffer->readBuffer(), m_streamInBuffer->availableBytes());
-        DLogVerbose("Steam in buffer size:%zd\n", m_streamInBuffer->availableBytes());
         if (m_streamInBuffer->availableBytes() <= 0) {
             DLogDebug("No data in buffer\n");
             return false;
@@ -849,7 +844,7 @@ namespace videocore
         // at least one byte in current buffer.
         memcpy(&first_byte, m_streamInBuffer->readBuffer(), 1);
         int header_type = (first_byte & 0xC0) >> 6;
-        DLogVerbose("First byte:0x%X, header type:%d\n", (int)first_byte, header_type);
+        
         switch(header_type) {
             case RTMP_HEADER_TYPE_FULL:
             {

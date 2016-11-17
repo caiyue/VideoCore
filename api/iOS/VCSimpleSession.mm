@@ -133,6 +133,7 @@ namespace videocore { namespace simpleApi {
     float  _videoZoomFactor;
     int    _audioChannelCount;
     float  _audioSampleRate;
+    int    _audioBitRate;
     float  _micGain;
 
     VCCameraState _cameraState;
@@ -522,9 +523,10 @@ namespace videocore { namespace simpleApi {
     self.videoSize = videoSize;
     self.fps = fps;
     _useInterfaceOrientation = useInterfaceOrientation;
-    self.micGain = 1.f;
+    self.micGain = 0.5f;
     self.audioChannelCount = 2;
-    self.audioSampleRate = 22050.;
+    self.audioSampleRate = 22050;
+    _audioBitRate = 96000;
     self.useAdaptiveBitrate = NO;
     self.aspectMode = aspectMode;
 
@@ -548,7 +550,7 @@ namespace videocore { namespace simpleApi {
 
 - (void) dealloc
 {
-    [self endRtmpSession];
+    // [self endRtmpSession];
     [self.captureSession stopRunning];
     self.captureSession = nil;
 
@@ -730,13 +732,24 @@ namespace videocore { namespace simpleApi {
 
 - (void) pauseRtmpSession {
     dispatch_async(_graphManagementQueue, ^{
-        m_h264Packetizer.reset();
-        m_aacPacketizer.reset();
-        m_videoSplit->removeOutput(m_h264Encoder);
-        m_h264Encoder.reset();
-        m_aacEncoder.reset();
-
-        m_outputSession.reset();
+        if( nullptr != m_h264Packetizer ) {
+            m_h264Packetizer.reset();
+        }
+        if( nullptr != m_aacPacketizer ) {
+            m_aacPacketizer.reset();
+        }
+        if( nullptr != m_aacPacketizer ) {
+            m_videoSplit->removeOutput(m_h264Encoder);
+        }
+        if( nullptr != m_h264Encoder ) {
+            m_h264Encoder.reset();
+        }
+        if( nullptr != m_aacEncoder ) {
+            m_aacEncoder.reset();
+        }
+        if( nullptr != m_outputSession ) {
+            m_outputSession.reset();
+        }
     });
     
     _bitrate = _bpsCeiling;
@@ -772,13 +785,24 @@ namespace videocore { namespace simpleApi {
     }
     
     dispatch_async(_graphManagementQueue, ^{
-        m_h264Packetizer.reset();
-        m_aacPacketizer.reset();
-        m_videoSplit->removeOutput(m_h264Encoder);
-        m_h264Encoder.reset();
-        m_aacEncoder.reset();
-        
-        m_outputSession.reset();
+        if( nullptr != m_h264Packetizer ) {
+            m_h264Packetizer.reset();
+        }
+        if( nullptr != m_aacPacketizer ) {
+            m_aacPacketizer.reset();
+        }
+        if( nullptr != m_aacPacketizer ) {
+            m_videoSplit->removeOutput(m_h264Encoder);
+        }
+        if( nullptr != m_h264Encoder ) {
+            m_h264Encoder.reset();
+        }
+        if( nullptr != m_aacEncoder ) {
+            m_aacEncoder.reset();
+        }
+        if( nullptr != m_outputSession ) {
+            m_outputSession.reset();
+        }
     });
     
     _bitrate = _bpsCeiling;
@@ -850,7 +874,7 @@ namespace videocore { namespace simpleApi {
     id audioSettings = @{AVFormatIDKey: @(kAudioFormatMPEG4AAC),
                          AVSampleRateKey: @(self.audioSampleRate),
                          AVNumberOfChannelsKey: @(self.audioChannelCount),
-                         AVEncoderBitRateKey: @128000
+                         AVEncoderBitRateKey: @(_audioBitRate)
                          };
     
     VCWriter *writer = [VCWriter writerWithFilePath:self.filePath
@@ -980,7 +1004,7 @@ namespace videocore { namespace simpleApi {
     {
         // Add encoders
 
-        m_aacEncoder = std::make_shared<videocore::iOS::AACEncode>(self.audioSampleRate, self.audioChannelCount, 96000);
+        m_aacEncoder = std::make_shared<videocore::iOS::AACEncode>(self.audioSampleRate, self.audioChannelCount, _audioBitRate);
         if(SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"8.0")) {
             // If >= iOS 8.0 use the VideoToolbox encoder that does not write to disk.
             m_h264Encoder = std::make_shared<videocore::Apple::H264Encode>(self.videoSize.width,
