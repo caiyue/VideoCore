@@ -76,7 +76,7 @@ namespace videocore
     class RTMPSession : public IOutputSession
     {
     public:
-        RTMPSession(std::string uri, RTMPSessionStateCallback callback);
+        RTMPSession(std::string uri, int maxSendBufferSize, RTMPSessionStateCallback callback);
         ~RTMPSession();
         
         void connectServer();

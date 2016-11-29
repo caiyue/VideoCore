@@ -147,8 +147,9 @@ namespace videocore { namespace simpleApi {
     BOOL _continuousExposure;
     CGPoint _focusPOI;
     CGPoint _exposurePOI;
-    
+    int _maxSendBufferSize;
     VCFilter _filter;
+    
 }
 @property (nonatomic, readwrite)    VCSessionState              rtmpSessionState;
 // 文件记录保存位置
@@ -184,6 +185,7 @@ namespace videocore { namespace simpleApi {
 @dynamic exposurePointOfInterest;
 @dynamic useAdaptiveBitrate;
 @dynamic estimatedThroughput;
+@synthesize maxSendBufferSize;
 
 @dynamic previewView;
 // -----------------------------------------------------------------------------
@@ -598,7 +600,7 @@ namespace videocore { namespace simpleApi {
     uri << (rtmpUrl ? [rtmpUrl UTF8String] : "") << "/" << (streamKey ? [streamKey UTF8String] : "");
     
     m_outputSession.reset(
-                          new videocore::RTMPSession ( uri.str(),
+                          new videocore::RTMPSession ( uri.str(), _maxSendBufferSize,
                                                       [=](videocore::RTMPSession& session,
                                                           ClientState_t state) {
                                                           

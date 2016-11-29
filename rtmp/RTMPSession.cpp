@@ -40,9 +40,9 @@
 
 namespace videocore
 {
-    static const size_t kMaxSendbufferSize = 128 * 1024;
+    static const size_t kMaxSendbufferSize = 16 * 1024;
     
-    RTMPSession::RTMPSession(std::string uri, RTMPSessionStateCallback callback)
+    RTMPSession::RTMPSession(std::string uri, int maxSendBufferSize, RTMPSessionStateCallback callback)
     : m_streamOutRemainder(65536)
     , m_streamInBuffer(new PreallocBuffer(4096))
     , m_callback(callback)
@@ -50,7 +50,7 @@ namespace videocore
     , m_outChunkSize(128)
     , m_inChunkSize(128)
     , m_bufferSize(0)
-    , m_maxSendBufferSize(kMaxSendbufferSize)
+    , m_maxSendBufferSize(maxSendBufferSize == 0 ? kMaxSendbufferSize : maxSendBufferSize)
     , m_streamId(0)
     , m_numberOfInvokes(0)
     , m_state(kClientStateNone)

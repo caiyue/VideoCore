@@ -135,6 +135,8 @@ typedef NS_ENUM(NSInteger, VCConnectionQuality) {
 
 @property (nonatomic, assign) id<VCSessionDelegate> delegate;
 
+@property (nonatomic, assign) int maxSendBufferSize;
+
 // -----------------------------------------------------------------------------
 - (instancetype) initWithVideoSize:(CGSize)videoSize
                          frameRate:(int)fps
