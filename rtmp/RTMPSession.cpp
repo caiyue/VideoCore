@@ -220,11 +220,18 @@ namespace videocore
     RTMPSession::write(uint8_t* data, size_t size, std::chrono::steady_clock::time_point packetTime, bool isKeyframe)
     {
         if(size > 0) {
-            std::shared_ptr<Buffer> buf = std::make_shared<Buffer>(size);
-            buf->put(data, size);
-            
             m_throughputSession.addBufferSizeSample(m_bufferSize);
             
+            increaseBuffer(size);
+            if(m_bufferSize > this->m_maxSendBufferSize && !isKeyframe) {
+                this->increaseBuffer(-int64_t(size));
+                printf("discarded %lu bytes\n", size);
+                return;
+            }
+            this->increaseBuffer(-int64_t(size));
+            
+            std::shared_ptr<Buffer> buf = std::make_shared<Buffer>(size);
+            buf->put(data, size);
             increaseBuffer(size);
             if(isKeyframe) {
                 m_sentKeyframe = packetTime;
@@ -232,6 +239,7 @@ namespace videocore
             if(m_bufferSize > this->m_maxSendBufferSize && isKeyframe) {
                 m_clearing = true;
             }
+            
             m_networkQueue.enqueue([=]() {
                 size_t tosend = size;
                 uint8_t* p ;

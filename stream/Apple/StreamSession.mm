@@ -62,12 +62,14 @@ namespace videocore {
         {
             m_streamCallback = [[NSStreamCallback alloc] init];
             SCB(m_streamCallback).session = this;
+            queue = dispatch_queue_create("com.videocore.network", 0);
         }
         
         StreamSession::~StreamSession()
         {
             disconnect();
             [SCB(m_streamCallback) release];
+            dispatch_release(queue);
         }
         
         void
@@ -92,7 +94,6 @@ namespace videocore {
                 m_outputStream = (NSOutputStream*)writeStream;
             
 
-                dispatch_queue_t queue = dispatch_queue_create("com.videocore.network", 0);
                 
                 if(m_inputStream && m_outputStream) {
                     dispatch_async(queue, ^{
@@ -102,7 +103,6 @@ namespace videocore {
                 else {
                     nsStreamCallback(nullptr, NSStreamEventErrorOccurred);
                 }
-                dispatch_release(queue);
             }
 
         }
@@ -126,6 +126,7 @@ namespace videocore {
                 [NSIS(m_inputStream) release];
                 m_inputStream = nullptr;
             }
+            
 
             if(m_runLoop) {
                 CFRunLoopStop([NSRL(m_runLoop) getCFRunLoop]);

@@ -56,7 +56,9 @@ namespace videocore {
             void*             m_outputStream;
             void*                  m_runLoop;
             void*           m_streamCallback;
-                        
+            
+            dispatch_queue_t queue;
+            
             StreamSessionCallback_T     m_callback;
             StreamStatus_T              m_status;
           
