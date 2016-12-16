@@ -245,6 +245,23 @@ namespace videocore { namespace Apple {
         }
         
         if(err == noErr) {
+            const int v = (m_bitrate * 1.4) / 8;
+            const int w = 1;
+            
+            CFNumberRef ref = CFNumberCreate(NULL, kCFNumberSInt32Type, &v);
+            CFNumberRef ref2 = CFNumberCreate(NULL, kCFNumberSInt32Type, &w);
+            
+            CFMutableArrayRef array = CFArrayCreateMutable(NULL, 2, &kCFTypeArrayCallBacks);
+            CFArrayAppendValue(array, ref);
+            CFArrayAppendValue(array, ref2);
+            err = VTSessionSetProperty(session, kVTCompressionPropertyKey_DataRateLimits, array);
+            
+            CFRelease(ref);
+            CFRelease(ref2);
+            CFRelease(array);
+        }
+        
+        if(err == noErr) {
             err = VTSessionSetProperty(session, kVTCompressionPropertyKey_RealTime, kCFBooleanTrue);
         }
         
