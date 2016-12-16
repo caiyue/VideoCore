@@ -222,14 +222,6 @@ namespace videocore
         if(size > 0) {
             m_throughputSession.addBufferSizeSample(m_bufferSize);
             
-            increaseBuffer(size);
-            if(m_bufferSize > this->m_maxSendBufferSize && !isKeyframe) {
-                this->increaseBuffer(-int64_t(size));
-                printf("discarded %lu bytes\n", size);
-                return;
-            }
-            this->increaseBuffer(-int64_t(size));
-            
             std::shared_ptr<Buffer> buf = std::make_shared<Buffer>(size);
             buf->put(data, size);
             increaseBuffer(size);
