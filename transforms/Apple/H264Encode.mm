@@ -92,11 +92,11 @@ namespace videocore { namespace Apple {
             ((H264Encode*)outputCallbackRefCon)->compressionSessionOutput((uint8_t*)pps_buf.get(),ppsSize, pts.value, dts.value);
         }
         
-        char* bufferData;
-        size_t size;
-        CMBlockBufferGetDataPointer(block, 0, NULL, &size, &bufferData);
-        
-        ((H264Encode*)outputCallbackRefCon)->compressionSessionOutput((uint8_t*)bufferData,size, pts.value, dts.value);
+        char* bufferData = NULL;
+        size_t size = 0;
+        if( kCMBlockBufferNoErr == CMBlockBufferGetDataPointer(block, 0, NULL, &size, &bufferData) ) {
+            ((H264Encode*)outputCallbackRefCon)->compressionSessionOutput((uint8_t*)bufferData,size, pts.value, dts.value);
+        }
         
     }
 #endif
