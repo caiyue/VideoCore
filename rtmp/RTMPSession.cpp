@@ -546,12 +546,12 @@ namespace videocore
         //put_be32(enc, 5+5+2); // videoEnabled + audioEnabled + 2
         
         //put_named_double(enc, "duration", 0.0);
-        put_named_double(enc, "width", m_frameWidth);
-        put_named_double(enc, "height", m_frameHeight);
+//        put_named_double(enc, "width", m_frameWidth);
+//        put_named_double(enc, "height", m_frameHeight);
         put_named_double(enc, "displaywidth", m_frameWidth);
         put_named_double(enc, "displayheight", m_frameHeight);
-        put_named_double(enc, "framewidth", m_frameWidth);
-        put_named_double(enc, "frameheight", m_frameHeight);
+//        put_named_double(enc, "framewidth", m_frameWidth);
+//        put_named_double(enc, "frameheight", m_frameHeight);
         put_named_double(enc, "videodatarate", static_cast<double>(m_bitrate) / 1024.);
         put_named_double(enc, "videoframerate", 1. / m_frameDuration);
         
@@ -606,8 +606,8 @@ namespace videocore
             put_byte(enc, 0);
             put_byte(enc, kAMFObjectEnd);
         }
-        put_be16(enc, 0);
-        put_byte(enc, kAMFObjectEnd);
+//        put_be16(enc, 0);
+//        put_byte(enc, kAMFObjectEnd);
         put_named_double(enc, "audiodatarate", 131152. / 1024.);
         put_named_double(enc, "audiosamplerate", m_audioSampleRate);
         put_named_double(enc, "audiosamplesize", 16);
