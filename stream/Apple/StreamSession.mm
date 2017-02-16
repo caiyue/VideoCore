@@ -62,14 +62,19 @@ namespace videocore {
         {
             m_streamCallback = [[NSStreamCallback alloc] init];
             SCB(m_streamCallback).session = this;
-            queue = dispatch_queue_create("com.videocore.network", 0);
+            m_serialQueue = dispatch_queue_create("com.videocore.network", DISPATCH_QUEUE_SERIAL);
         }
         
         StreamSession::~StreamSession()
         {
             disconnect();
             [SCB(m_streamCallback) release];
-            dispatch_release(queue);
+            if (m_serialQueue) {
+#if __IPHONE_OS_VERSION_MIN_REQUIRED < 60000
+                dispatch_release(m_serialQueue);
+#endif
+                m_serialQueue = nil;
+            }
         }
         
         void
@@ -90,13 +95,18 @@ namespace videocore {
                                                    &readStream,
                                                    &writeStream);
             
+                CFReadStreamSetProperty(readStream,
+                                        kCFStreamPropertyShouldCloseNativeSocket,
+                                        kCFBooleanTrue);
+                CFWriteStreamSetProperty(writeStream,
+                                         kCFStreamPropertyShouldCloseNativeSocket,
+                                         kCFBooleanTrue);
+                
                 m_inputStream = (NSInputStream*)readStream;
                 m_outputStream = (NSOutputStream*)writeStream;
             
-
-                
-                if(m_inputStream && m_outputStream) {
-                    dispatch_async(queue, ^{
+                if (m_inputStream && m_outputStream) {
+                    dispatch_async(m_serialQueue, ^{
                         this->startNetwork();
                     });
                 }
@@ -104,35 +114,36 @@ namespace videocore {
                     nsStreamCallback(nullptr, NSStreamEventErrorOccurred);
                 }
             }
-
         }
         
         void
         StreamSession::disconnect()
         {
-            if(m_outputStream) {
-                //if(m_runLoop) {
-                //    [NSOS(m_outputStream) removeFromRunLoop:NSRL(m_runLoop) forMode:NSDefaultRunLoopMode];
-                //}
-                [NSOS(m_outputStream) close];
-                [NSOS(m_outputStream) release];
-                m_outputStream = nullptr;
-            }
-            if(m_inputStream) {
-                //if(m_runLoop) {
-                //    [NSOS(m_inputStream) removeFromRunLoop:NSRL(m_runLoop) forMode:NSDefaultRunLoopMode];
-                //}
-                [NSIS(m_inputStream) close];
-                [NSIS(m_inputStream) release];
-                m_inputStream = nullptr;
-            }
-            
-
-            if(m_runLoop) {
-                CFRunLoopStop([NSRL(m_runLoop) getCFRunLoop]);
-                [(id)m_runLoop release];
-                m_runLoop = nullptr;
-            }
+            dispatch_sync(m_serialQueue, ^{
+                if (m_outputStream) {
+                    if (m_runLoop) {
+                        [NSOS(m_outputStream) removeFromRunLoop:NSRL(m_runLoop) forMode:NSDefaultRunLoopMode];
+                    }
+                    [NSOS(m_outputStream) close];
+                    [NSOS(m_outputStream) release];
+                    m_outputStream = nullptr;
+                }
+                
+                if (m_inputStream) {
+                    if (m_runLoop) {
+                       [NSOS(m_inputStream) removeFromRunLoop:NSRL(m_runLoop) forMode:NSDefaultRunLoopMode];
+                    }
+                    [NSIS(m_inputStream) close];
+                    [NSIS(m_inputStream) release];
+                    m_inputStream = nullptr;
+                }
+                
+                if (m_runLoop) {
+                    CFRunLoopStop([NSRL(m_runLoop) getCFRunLoop]);
+                    [(id)m_runLoop release];
+                    m_runLoop = nullptr;
+                }
+            });
         }
 
         ssize_t
@@ -181,6 +192,7 @@ namespace videocore {
             }
             m_callback(*this, status);
         }
+        
         void
         StreamSession::nsStreamCallback(void* stream, unsigned event)
         {
@@ -206,12 +218,12 @@ namespace videocore {
             }
             if(event & NSStreamEventErrorOccurred) {
                 setStatus(kStreamStatusErrorEncountered, true);
-//                if (NSIS(m_inputStream).streamError) {
-//                    NSLog(@"Input stream error:%@", NSIS(m_inputStream).streamError);
-//                }
-//                if (NSOS(m_outputStream).streamError) {
-//                    NSLog(@"Output stream error:%@", NSIS(m_outputStream).streamError);
-//                }
+                if (NSIS(m_inputStream).streamError) {
+                    NSLog(@"Input stream error:%@", NSIS(m_inputStream).streamError);
+                }
+                if (NSOS(m_outputStream).streamError) {
+                    NSLog(@"Output stream error:%@", NSIS(m_outputStream).streamError);
+                }
             }
         }
         
@@ -219,6 +231,8 @@ namespace videocore {
         StreamSession::startNetwork()
         {
             m_runLoop = [NSRunLoop currentRunLoop];
+            [(NSRunLoop *)m_runLoop retain];
+            
             [NSIS(m_inputStream) setDelegate:SCB(m_streamCallback)];
             [NSIS(m_inputStream) scheduleInRunLoop:NSRL(m_runLoop) forMode:NSDefaultRunLoopMode];
             [NSOS(m_outputStream) setDelegate:SCB(m_streamCallback)];
@@ -226,9 +240,13 @@ namespace videocore {
             [NSOS(m_outputStream) open];
             [NSIS(m_inputStream) open];
 
-            [(id)m_runLoop retain];
-            [NSRL(m_runLoop) run];
+            dispatch_queue_t queue = dispatch_queue_create("com.videocore.network.sockets", DISPATCH_QUEUE_SERIAL);
+            dispatch_async(queue, ^{
+                [NSRL(m_runLoop) run];
+            });
+#if __IPHONE_OS_VERSION_MIN_REQUIRED < 60000
+            dispatch_release(queue);
+#endif
         }
-        
     }
 }
