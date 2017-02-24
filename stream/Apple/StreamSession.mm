@@ -240,13 +240,8 @@ namespace videocore {
             [NSOS(m_outputStream) open];
             [NSIS(m_inputStream) open];
 
-            dispatch_queue_t queue = dispatch_queue_create("com.videocore.network.sockets", DISPATCH_QUEUE_SERIAL);
-            dispatch_async(queue, ^{
-                [NSRL(m_runLoop) run];
-            });
-#if __IPHONE_OS_VERSION_MIN_REQUIRED < 60000
-            dispatch_release(queue);
-#endif
+            [NSRL(m_runLoop) run];
+
         }
     }
 }
