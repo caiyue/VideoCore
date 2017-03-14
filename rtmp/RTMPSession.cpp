@@ -108,7 +108,6 @@ namespace videocore
     
     void RTMPSession::disconnectServer() {
         if(m_state >= kClientStateConnected && m_state <= kClientStateSessionStarted ) {
-            sendDeleteStream();
             if(nullptr != m_streamSession && (m_streamSession->status() & kStreamStatusConnected) )
             m_streamSession->disconnect();
         }
@@ -246,6 +245,9 @@ namespace videocore
                 while(tosend > 0 && !this->m_ending && (!this->m_clearing || this->m_sentKeyframe == packetTime)) {
                     this->m_clearing = false;
                     size_t sent = m_streamSession->write(p, tosend);
+                    if(sent < 0) {
+                        break;
+                    }
                     p += sent;
                     tosend -= sent;
                     this->m_throughputSession.addSentBytesSample(sent);
