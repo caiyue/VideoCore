@@ -88,7 +88,7 @@ namespace videocore
         void setSessionParameters(IMetadata& parameters);
         void setBandwidthCallback(BandwidthCallback callback);
         void setMaxSendBufferSize(size_t size) { m_maxSendBufferSize = size; printf("MAX SEND BUFFER %lu\n", size); };
-        
+        void disconnectServer();
     private:
         
         // Deprecate sendPacket
@@ -104,9 +104,8 @@ namespace videocore
         void handshake0();
         void handshake1();
         void handshake2();
-        
-        void sendConnectPacket();
         void sendReleaseStream();
+        void sendConnectPacket();
         void sendFCPublish();
         void sendCreateStream();
         void sendPublish();

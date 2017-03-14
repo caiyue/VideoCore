@@ -750,6 +750,10 @@ namespace videocore { namespace simpleApi {
             m_aacEncoder.reset();
         }
         if( nullptr != m_outputSession ) {
+            auto video = std::dynamic_pointer_cast<videocore::RTMPSession>(m_outputSession);
+            if( nil == video ) {
+                video->disconnectServer();
+            }
             m_outputSession.reset();
         }
     });
@@ -771,6 +775,10 @@ namespace videocore { namespace simpleApi {
 }
 
 - (void) endRtmpSession {
+    auto video = std::dynamic_pointer_cast<videocore::RTMPSession>(m_outputSession);
+    if( nil == video ) {
+        video->disconnectServer();
+    }
     [self endRtmpSessionWithCompletionHandler:nil];
 }
 

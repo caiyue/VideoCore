@@ -96,10 +96,6 @@ namespace videocore
     RTMPSession::~RTMPSession()
     {
         DLog("~RTMPSession");
-        if(m_state == kClientStateConnected) {
-            sendDeleteStream();
-        }
-        
         m_ending = true;
         m_jobQueue.mark_exiting();
         m_jobQueue.enqueue_sync([]() {});
@@ -109,6 +105,16 @@ namespace videocore
         dispatch_release(m_networkWaitSemaphore);
 #endif
     }
+    
+    void RTMPSession::disconnectServer() {
+        if(m_state >= kClientStateConnected && m_state <= kClientStateSessionStarted ) {
+            sendDeleteStream();
+            if(nullptr != m_streamSession && (m_streamSession->status() & kStreamStatusConnected) )
+            m_streamSession->disconnect();
+        }
+    }
+    
+    
     void
     RTMPSession::connectServer() {
         // reset the stream buffer.
@@ -472,17 +478,19 @@ namespace videocore
     void
     RTMPSession::sendReleaseStream()
     {
-        RTMPChunk_0 metadata = {{0}};
-        metadata.msg_stream_id = kControlChannelStreamId;
-        metadata.msg_type_id = RTMP_PT_NOTIFY;
-        std::vector<uint8_t> buff;
-        put_string(buff, "releaseStream");
-        put_double(buff, trackCommand("releaseStream"));
-        put_byte(buff, kAMFNull);
-        put_string(buff, m_playPath);
-        metadata.msg_length.data = static_cast<int> (buff.size());
-        
-        sendPacket(&buff[0], buff.size(), metadata);
+        if(m_state >= kClientStateConnected) {
+            RTMPChunk_0 metadata = {{0}};
+            metadata.msg_stream_id = kControlChannelStreamId;
+            metadata.msg_type_id = RTMP_PT_NOTIFY;
+            std::vector<uint8_t> buff;
+            put_string(buff, "releaseStream");
+            put_double(buff, trackCommand("releaseStream"));
+            put_byte(buff, kAMFNull);
+            put_string(buff, m_playPath);
+            metadata.msg_length.data = static_cast<int> (buff.size());
+            
+            sendPacket(&buff[0], buff.size(), metadata);
+        }
     }
     void
     RTMPSession::sendFCPublish()
@@ -1023,6 +1031,9 @@ namespace videocore
                 setClientState(kClientStateSessionStarted);
                 
                 m_throughputSession.start();
+            }
+            if(code == "NetStream.Unpublish.Success") {
+                DLog("code : %s\n", code.c_str());
             }
         }
         
