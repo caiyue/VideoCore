@@ -245,9 +245,7 @@ namespace videocore
                 while(tosend > 0 && !this->m_ending && (!this->m_clearing || this->m_sentKeyframe == packetTime)) {
                     this->m_clearing = false;
                     size_t sent = m_streamSession->write(p, tosend);
-                    if(sent < 0) {
-                        break;
-                    }
+                    
                     p += sent;
                     tosend -= sent;
                     this->m_throughputSession.addSentBytesSample(sent);
@@ -277,7 +275,7 @@ namespace videocore
     {
         bool stop1 = false;
         bool stop2 = false;
-        while ((m_streamSession->status() & kStreamStatusReadBufferHasBytes) && !stop2) {
+        while ((nullptr != m_streamSession) && (m_streamSession->status() & kStreamStatusReadBufferHasBytes) && !stop2) {
             size_t maxlen = m_streamInBuffer->availableSpace();
             if (maxlen > 0) {
                 ssize_t len = m_streamSession->read(m_streamInBuffer->writeBuffer(), maxlen);
@@ -361,6 +359,14 @@ namespace videocore
     void
     RTMPSession::streamStatusChanged(StreamStatus_T status)
     {
+        if(status & kStreamStatusEndStream) {
+            setClientState(kClientStateNotConnected);
+            return;
+        }
+        if(status & kStreamStatusErrorEncountered) {
+            setClientState(kClientStateError);
+            return;
+        }
         if(status & kStreamStatusConnected && m_state < kClientStateConnected) {
             setClientState(kClientStateConnected);
         }
@@ -379,12 +385,6 @@ namespace videocore
                 m_networkCond.notify_one();
 #endif
             }
-        }
-        if(status & kStreamStatusEndStream) {
-            setClientState(kClientStateNotConnected);
-        }
-        if(status & kStreamStatusErrorEncountered) {
-            setClientState(kClientStateError);
         }
     }
     

@@ -62,7 +62,7 @@ namespace videocore {
         {
             m_streamCallback = [[NSStreamCallback alloc] init];
             SCB(m_streamCallback).session = this;
-            m_serialQueue = dispatch_queue_create("com.videocore.network", DISPATCH_QUEUE_SERIAL);
+            m_serialQueue = dispatch_queue_create("com.videocore.network.streamSession", DISPATCH_QUEUE_SERIAL);
         }
         
         StreamSession::~StreamSession()
@@ -119,7 +119,7 @@ namespace videocore {
         void
         StreamSession::disconnect()
         {
-            dispatch_sync(m_serialQueue, ^{
+            // dispatch_sync(m_serialQueue, ^{
                 if (m_outputStream) {
                     if (m_runLoop) {
                         [NSOS(m_outputStream) removeFromRunLoop:NSRL(m_runLoop) forMode:NSDefaultRunLoopMode];
@@ -143,7 +143,7 @@ namespace videocore {
                     [(id)m_runLoop release];
                     m_runLoop = nullptr;
                 }
-            });
+            // });
         }
 
         ssize_t
