@@ -100,13 +100,14 @@ namespace videocore {
     m_frameDuration(frameDuration),
     m_outChannelCount(outChannelCount),
     m_outFrequencyInHz(outFrequencyInHz),
-    m_outBitsPerChannel(16),
+    m_outBitsPerChannel(outBitsPerChannel),
     m_exiting(false),
     m_mixQueue("com.videocore.audiomix", kJobQueuePriorityHigh),
     m_outgoingWindow(nullptr),
     m_catchingUp(false),
     m_epoch(std::chrono::steady_clock::now())
     {
+        // stereo: 2 * 16 / 8 = 4 bytes per sample
         m_bytesPerSample = outChannelCount * outBitsPerChannel / 8;
 
         
@@ -153,8 +154,8 @@ namespace videocore {
                                       size_t inBufferSize)
     {
         auto hash = std::hash<std::shared_ptr< ISource> >()(source);
-        size_t bufferSize = (inBufferSize ? inBufferSize : (m_bytesPerSample * m_outFrequencyInHz * m_bufferDuration * 4)); // 4 frames of buffer space.
-
+        // stereo: 4 * 44100 * m_bufferDuration * 4 ?
+        size_t bufferSize = (inBufferSize ? inBufferSize : (m_bytesPerSample * m_outFrequencyInHz * m_bufferDuration * 4));
         std::unique_ptr<RingBuffer> buffer(new RingBuffer(bufferSize));
         
         m_inGain[hash] = 1.f;
@@ -276,6 +277,7 @@ namespace videocore {
         const auto inFlags = metadata.getData<kAudioMetadataFlags>();
         const auto inNumberFrames = metadata.getData<kAudioMetadataNumberFrames>();
 
+        // frequencyInHz and BitsPerChannel, and outChannelCount the same, do nothing
         if(m_outFrequencyInHz == inFrequncyInHz && m_outBitsPerChannel == inBitsPerChannel && m_outChannelCount == inChannelCount)
         {
             // No resampling necessary

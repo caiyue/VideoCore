@@ -47,6 +47,16 @@ namespace videocore {
 
     /*!
      *  Specifies the properties of the incoming audio buffer.
+     * DataType
+     * AudioMetadataFrequencyInHz
+     * AudioMetadataBitsPerChannel
+     * AudioMetadataChannelCount
+     * AudioMetadataFlags
+     * AudioMetadataBytesPerFrame
+     * AudioMetadataNumberFrames
+     * AudioMetadataUsesOSStruct
+     * AudioMetadataLoops
+     * AudioMetadataSource
      */
     typedef MetaData<'soun', int, int, int, int, int, int, bool, bool, std::weak_ptr<ISource> > AudioBufferMetadata;
 

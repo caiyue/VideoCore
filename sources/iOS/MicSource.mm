@@ -27,6 +27,7 @@
 #include <videocore/mixers/IAudioMixer.hpp>
 #import <videocore/sources/iOS/Categories/AVCaptureSession+VCExtensions.h>
 #import <videocore/sources/iOS/Categories/AVCaptureDevice+VCExtensions.h>
+#import <Foundation/Foundation.h>
 
 @interface sbAudioCallback: NSObject<AVCaptureAudioDataOutputSampleBufferDelegate> {
     std::weak_ptr<videocore::iOS::MicSource> m_source;
@@ -60,8 +61,6 @@ namespace videocore { namespace iOS {
 
     MicSource::MicSource()
     :
-    m_sampleRate(0),
-    m_channelCount(0),
     m_audioBufferListData(nil)
     {
         AVAudioSession *session = [AVAudioSession sharedInstance];
@@ -78,10 +77,7 @@ namespace videocore { namespace iOS {
         setAudioBufferListData(nil);
     }
     
-    void MicSource::setup(AVCaptureSession *session, double sampleRate, int channelCount) {
-        m_sampleRate = sampleRate;
-        m_channelCount = channelCount;
-        
+    void MicSource::setup(AVCaptureSession *session) {    
         CaptureSessionSource::setup(session);
         
         [captureSession() startRunning];
@@ -113,6 +109,10 @@ namespace videocore { namespace iOS {
     
     void MicSource::bufferCaptured(CMSampleBufferRef sampleBuffer) {
         [writer() encodeAudioBuffer:sampleBuffer];
+        
+        
+        AudioStreamBasicDescription inputFormat = *(CMAudioFormatDescriptionGetStreamBasicDescription(CMSampleBufferGetFormatDescription(sampleBuffer)));
+        
         auto output = m_output.lock();
         if(output) {
             videocore::AudioBufferMetadata md (0.);
@@ -143,12 +143,12 @@ namespace videocore { namespace iOS {
             const size_t sampleSize = 2;
             size_t dataSize = buffer->mDataByteSize;
             
-            md.setData(m_sampleRate,
-                       16,
-                       m_channelCount,
+            md.setData(inputFormat.mSampleRate,
+                       inputFormat.mBitsPerChannel,
+                       inputFormat.mChannelsPerFrame,
                        kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked,
-                       m_channelCount * sampleSize,
-                       dataSize / (m_channelCount * sampleSize),
+                       inputFormat.mBytesPerFrame,
+                       dataSize / inputFormat.mBytesPerFrame,
                        false,
                        false,
                        shared_from_this());

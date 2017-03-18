@@ -36,7 +36,16 @@ namespace videocore {
     class ITransform : public IOutput
     {
     public:
+        /*!
+         *  set the next output in order to chain
+         *
+         *  \param the next output  
+         */
         virtual void setOutput(std::shared_ptr<IOutput> output) = 0;
+        
+        /*!
+         * Virtual destructor
+         */
         virtual ~ITransform() {};
     };
 }

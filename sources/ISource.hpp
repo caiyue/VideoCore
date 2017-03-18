@@ -45,7 +45,16 @@ namespace videocore
          */
         virtual void setOutput(std::shared_ptr<IOutput> output) = 0;
         
-        virtual void setFilter(std::shared_ptr<IFilter>) {} ;
+        /*!
+         *  add a filter.
+         *
+         *  \param filter a component that conforms to the videocore::IFilter interface
+         */
+        virtual void setFilter(std::shared_ptr<IFilter> filter) {} ;
+        
+        /*!
+         * get the filter
+         */
         virtual IFilter* const filter() { return nullptr; };
         
         /*! Virtual destructor */

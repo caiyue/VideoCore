@@ -66,10 +66,9 @@ namespace videocore { namespace iOS {
         /*!
          *  Setup microphone properties
          *
-         *  \param sampleRate   Sample rate
-         *  \param channelCount Channel count
+         *  \param session
          */
-        void setup(AVCaptureSession *session, double sampleRate, int channelCount);
+        void setup(AVCaptureSession *session);
 
         /*! ISource::setOutput */
         void setOutput(std::shared_ptr<IOutput> output);
@@ -93,9 +92,6 @@ namespace videocore { namespace iOS {
         void setCaptureOutputDelegate(id value);
         
     private:
-        double m_sampleRate;
-        int m_channelCount;
-        
         /*!
          *  Property for capture output delegate
          */

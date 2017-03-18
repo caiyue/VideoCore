@@ -64,6 +64,12 @@ static const int kUsingEnbededAudioSource = 1;
 static const int kMinVideoBitrate = 32000;
 static const int kMaxBufferedDuration = 15;
 
+static const int kDefaultAudioChannelCount = 2;
+static const float kDefaultAudioGain = 0.5f;
+static const int kDefaultAudioSampleRate = 44100;
+static const int kDefaultAudioBitRate = 96000;
+
+
 namespace videocore { namespace simpleApi {
 
     using PixelBufferCallback = std::function<void(const uint8_t* const data,
@@ -123,9 +129,11 @@ namespace videocore { namespace simpleApi {
     dispatch_queue_t _graphManagementQueue;
 
     CGSize _videoSize;
+    // video bitRate, the highest bitrate in adaptive mode
     int    _bitrate;
-
+    // video frame per second
     int    _fps;
+    // the highest bitrate in adaptive mode
     int    _bpsCeiling;
     int    _estimatedThroughput;
 
@@ -525,10 +533,10 @@ namespace videocore { namespace simpleApi {
     self.videoSize = videoSize;
     self.fps = fps;
     _useInterfaceOrientation = useInterfaceOrientation;
-    self.micGain = 0.5f;
-    self.audioChannelCount = 2;
-    self.audioSampleRate = 22050;
-    _audioBitRate = 96000;
+    self.micGain = kDefaultAudioGain;
+    self.audioChannelCount = kDefaultAudioChannelCount;
+    self.audioSampleRate = kDefaultAudioSampleRate;
+    _audioBitRate = kDefaultAudioBitRate;
     self.useAdaptiveBitrate = NO;
     self.aspectMode = aspectMode;
 
@@ -538,7 +546,9 @@ namespace videocore { namespace simpleApi {
     self.videoZoomFactor = 1.f;
 
     _cameraState = cameraState;
+    // center as focus poi
     _exposurePOI = _focusPOI = CGPointMake(0.5f, 0.5f);
+    // continuous auto focus 
     _continuousExposure = _continuousAutofocus = YES;
 
     _graphManagementQueue = dispatch_queue_create("com.videocore.session.graph", 0);
@@ -896,12 +906,14 @@ namespace videocore { namespace simpleApi {
     AVCaptureSession *session = [[[AVCaptureSession alloc] init] autorelease];
     self.captureSession = session;
     
+    // 1.0/25 = 40ms
     const double frameDuration = 1. / static_cast<double>(self.fps);
     
     {
-        // Add audio mixer
+        // 1024.0 / 22050? 
         const double aacPacketTime = 1024. / self.audioSampleRate;
 
+        // use 16bit pcm
         m_audioMixer = std::make_shared<videocore::Apple::AudioMixer>(self.audioChannelCount,
                                                                       self.audioSampleRate,
                                                                       16,
@@ -989,7 +1001,7 @@ namespace videocore { namespace simpleApi {
         // Add mic source
         m_micSource = std::make_shared<videocore::iOS::MicSource>();
         if( kUsingEnbededAudioSource ) {
-            m_micSource->setup(self.captureSession, self.audioSampleRate, self.audioChannelCount);
+            m_micSource->setup(self.captureSession);
         }
         m_micSource->setOutput(m_audioMixer);
 
