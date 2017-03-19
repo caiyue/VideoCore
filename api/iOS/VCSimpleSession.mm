@@ -68,7 +68,7 @@ static const int kDefaultAudioChannelCount = 2;
 static const float kDefaultAudioGain = 0.5f;
 static const int kDefaultAudioSampleRate = 44100;
 static const int kDefaultAudioBitRate = 96000;
-
+static const int kDefaultAudioBytesPerChannel = 2;
 
 namespace videocore { namespace simpleApi {
 
@@ -610,7 +610,8 @@ namespace videocore { namespace simpleApi {
     uri << (rtmpUrl ? [rtmpUrl UTF8String] : "") << "/" << (streamKey ? [streamKey UTF8String] : "");
     
     m_outputSession.reset(
-                          new videocore::RTMPSession ( uri.str(), _maxSendBufferSize,
+                          new videocore::RTMPSession ( uri.str(),
+                                                      MAX(_maxSendBufferSize, (self.bitrate + self.audioBitRate) / 8),
                                                       [=](videocore::RTMPSession& session,
                                                           ClientState_t state) {
                                                           
@@ -737,7 +738,8 @@ namespace videocore { namespace simpleApi {
                1. / static_cast<double>(self.fps),
                self.bitrate,
                self.audioSampleRate,
-               (self.audioChannelCount == 2));
+               (self.audioChannelCount == 2),
+               self.audioBitRate);
 
     m_outputSession->setSessionParameters(sp);
 }
@@ -910,13 +912,13 @@ namespace videocore { namespace simpleApi {
     const double frameDuration = 1. / static_cast<double>(self.fps);
     
     {
-        // 1024.0 / 22050? 
+        // aac use 1024 samples in one packet
         const double aacPacketTime = 1024. / self.audioSampleRate;
 
         // use 16bit pcm
         m_audioMixer = std::make_shared<videocore::Apple::AudioMixer>(self.audioChannelCount,
                                                                       self.audioSampleRate,
-                                                                      16,
+                                                                      8 * kDefaultAudioBytesPerChannel,
                                                                       aacPacketTime);
 
 

@@ -118,6 +118,7 @@ typedef NS_ENUM(NSInteger, VCConnectionQuality) {
 @property (nonatomic, assign) float         videoZoomFactor;
 @property (nonatomic, assign) int           audioChannelCount;
 @property (nonatomic, assign) float         audioSampleRate;
+@property (nonatomic, assign) int         audioBitRate;
 // 麦克风增益
 @property (nonatomic, assign) float         micGain;        // [0..1]
 @property (nonatomic, assign) CGPoint       focusPointOfInterest;   // (0,0) is top-left, (1,1) is bottom-right

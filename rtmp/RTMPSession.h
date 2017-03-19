@@ -58,9 +58,10 @@ namespace videocore
         kRTMPSessionParameterFrameDuration,
         kRTMPSessionParameterVideoBitrate,
         kRTMPSessionParameterAudioFrequency,
-        kRTMPSessionParameterStereo
+        kRTMPSessionParameterStereo,
+        kRTMPSessionParameterAudioBitrate
     };
-    typedef MetaData<'rtmp', int32_t, int32_t, double, int32_t, double, bool> RTMPSessionParameters_t;
+    typedef MetaData<'rtmp', int32_t, int32_t, double, int32_t, double, bool, double> RTMPSessionParameters_t;
     enum {
         kRTMPMetadataTimestamp=0,
         kRTMPMetadataMsgLength,
@@ -97,7 +98,7 @@ namespace videocore
         
         
         void streamStatusChanged(StreamStatus_T status);
-        void write(uint8_t* data, size_t size, std::chrono::steady_clock::time_point packetTime = std::chrono::steady_clock::now(), bool isKeyframe = false);
+        void write(uint8_t* data, size_t size, std::chrono::steady_clock::time_point packetTime = std::chrono::steady_clock::now(), bool isKeyframe = false, int msgType = 0);
         void dataReceived();
         void setClientState(ClientState_t state);
         void handshake();
@@ -166,6 +167,7 @@ namespace videocore
         size_t          m_inChunkSize;
         size_t          m_maxSendBufferSize;
         int64_t         m_bufferSize;
+        int64_t         m_dropped;
         
         int32_t         m_streamId;
 //        int32_t         m_createStreamInvoke;
@@ -174,6 +176,7 @@ namespace videocore
         int32_t         m_frameHeight;
         int32_t         m_bitrate;
         double          m_frameDuration;
+        double          m_audioRate;
         double          m_audioSampleRate;
         bool            m_audioStereo;
         

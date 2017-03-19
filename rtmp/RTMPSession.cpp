@@ -50,6 +50,7 @@ namespace videocore
     , m_outChunkSize(128)
     , m_inChunkSize(128)
     , m_bufferSize(0)
+    , m_dropped(0)
     , m_maxSendBufferSize(maxSendBufferSize == 0 ? kMaxSendbufferSize : maxSendBufferSize)
     , m_streamId(0)
     , m_numberOfInvokes(0)
@@ -135,6 +136,7 @@ namespace videocore
         m_frameWidth = parms.getData<kRTMPSessionParameterWidth>();
         m_audioSampleRate = parms.getData<kRTMPSessionParameterAudioFrequency>();
         m_audioStereo = parms.getData<kRTMPSessionParameterStereo>();
+        m_audioRate = parms.getData<kRTMPSessionParameterAudioBitrate>();
     }
     void
     RTMPSession::setBandwidthCallback(BandwidthCallback callback)
@@ -204,7 +206,15 @@ namespace videocore
                     p+=tosend;
                     len-=tosend;
                 }
-                this->write(&chunk[0], chunk.size(), packetTime, inMetadata.getData<kRTMPMetadataIsKeyframe>() );
+                
+                int msgType = RTMP_PT_NOTIFY;
+                if(inMetadata.getData<kRTMPMetadataMsgTypeId>() == RTMP_PT_AUDIO ) {
+                    msgType = RTMP_PT_AUDIO;
+                }
+                else if( inMetadata.getData<kRTMPMetadataMsgTypeId>() == RTMP_PT_VIDEO ) {
+                    msgType = RTMP_PT_VIDEO;
+                }
+                this->write(&chunk[0], chunk.size(), packetTime, inMetadata.getData<kRTMPMetadataIsKeyframe>(), msgType);
             }
         });
     }
@@ -222,28 +232,38 @@ namespace videocore
         m_bufferSize = std::max(m_bufferSize + size, 0LL);
     }
     void
-    RTMPSession::write(uint8_t* data, size_t size, std::chrono::steady_clock::time_point packetTime, bool isKeyframe)
+    RTMPSession::write(uint8_t* data, size_t size, std::chrono::steady_clock::time_point packetTime, bool isKeyframe, int msgType)
     {
         if(size > 0) {
             m_throughputSession.addBufferSizeSample(m_bufferSize);
             
-            std::shared_ptr<Buffer> buf = std::make_shared<Buffer>(size);
-            buf->put(data, size);
-            increaseBuffer(size);
-            if(isKeyframe) {
-                m_sentKeyframe = packetTime;
+            if(m_clearing) {
+                if(m_bufferSize < 0.4 * this->m_maxSendBufferSize && isKeyframe && msgType == RTMP_PT_VIDEO) {
+                    m_clearing = false;
+                }
             }
-            if(m_bufferSize > this->m_maxSendBufferSize && isKeyframe) {
+            
+            if(m_bufferSize > this->m_maxSendBufferSize && isKeyframe && msgType == RTMP_PT_VIDEO) {
                 m_clearing = true;
             }
+            
+            if (m_clearing && (msgType == RTMP_PT_VIDEO || msgType == RTMP_PT_AUDIO)) {
+                m_dropped += size;
+                printf("discarded %lu bytes, total=%lu\n", size, m_dropped);
+                return;
+            }
+            
+            std::shared_ptr<Buffer> buf = std::make_shared<Buffer>(size);
+            buf->put(data, size);
+            // tag we have more size data to send
+            increaseBuffer(size);
             
             m_networkQueue.enqueue([=]() {
                 size_t tosend = size;
                 uint8_t* p ;
                 buf->read(&p, size);
                 
-                while(tosend > 0 && !this->m_ending && (!this->m_clearing || this->m_sentKeyframe == packetTime)) {
-                    this->m_clearing = false;
+                while(tosend > 0 && !this->m_ending ) {
                     size_t sent = m_streamSession->write(p, tosend);
                     
                     p += sent;
@@ -251,19 +271,16 @@ namespace videocore
                     this->m_throughputSession.addSentBytesSample(sent);
                     if( sent == 0 ) {
 #ifdef __APPLE__
-                        dispatch_semaphore_wait(m_networkWaitSemaphore, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)));
+                        dispatch_semaphore_wait(m_networkWaitSemaphore, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)));
 #else
                         std::unique_lock<std::mutex> l(m_networkMutex);
-                        m_networkCond.wait_until(l, std::chrono::steady_clock::now() + std::chrono::milliseconds(1000));
+                        m_networkCond.wait_until(l, std::chrono::steady_clock::now() + std::chrono::milliseconds(100));
                         
                         l.unlock();
 #endif
                     }
                 }
                 
-                if (this->m_clearing) {
-                    printf("discarded %lu bytes\n", size);
-                }
                 
                 this->increaseBuffer(-int64_t(size));
             });
@@ -553,72 +570,14 @@ namespace videocore
         put_string(enc, "@setDataFrame");
         put_string(enc, "onMetaData");
         put_byte(enc, kAMFObject);
-        //put_be32(enc, 5+5+2); // videoEnabled + audioEnabled + 2
-        
-        //put_named_double(enc, "duration", 0.0);
-//        put_named_double(enc, "width", m_frameWidth);
-//        put_named_double(enc, "height", m_frameHeight);
-        put_named_double(enc, "displaywidth", m_frameWidth);
-        put_named_double(enc, "displayheight", m_frameHeight);
-//        put_named_double(enc, "framewidth", m_frameWidth);
-//        put_named_double(enc, "frameheight", m_frameHeight);
+       
+        put_named_double(enc, "width", m_frameWidth);
+        put_named_double(enc, "height", m_frameHeight);
         put_named_double(enc, "videodatarate", static_cast<double>(m_bitrate) / 1024.);
         put_named_double(enc, "videoframerate", 1. / m_frameDuration);
-        
         put_named_string(enc, "videocodecid", "avc1");
-        {
-            put_name(enc, "trackinfo");
-            put_byte(enc, kAMFStrictArray);
-            put_be32(enc, 2);
-            
-            //
-            // Audio stream metadata
-            put_byte(enc, kAMFObject);
-            put_named_string(enc, "type", "audio");
-            {
-                std::stringstream ss;
-                ss << "{AACFrame: codec:AAC, channels: " << m_audioStereo+1 << ", frequency:" << m_audioSampleRate << ", samplesPerFrame:1024, objectType:LC}";
-                put_named_string(enc, "description", ss.str());
-            }
-            put_named_double(enc, "timescale", 1000.);
-            
-            put_name(enc, "sampledescription");
-            put_byte(enc, kAMFStrictArray);
-            put_be32(enc, 1);
-            put_byte(enc, kAMFObject);
-            put_named_string(enc, "sampletype", "mpeg4-generic");
-            put_byte(enc, 0);
-            put_byte(enc, 0);
-            put_byte(enc, kAMFObjectEnd);
-            
-            put_named_string(enc, "language", "eng");
-            
-            put_byte(enc, 0);
-            put_byte(enc, 0);
-            put_byte(enc, kAMFObjectEnd);
-            
-            //
-            // Video stream metadata
-            
-            put_byte(enc, kAMFObject);
-            put_named_string(enc, "type", "video");
-            put_named_double(enc, "timescale", 1000.);
-            put_named_string(enc, "language", "eng");
-            put_name(enc, "sampledescription");
-            put_byte(enc, kAMFStrictArray);
-            put_be32(enc, 1);
-            put_byte(enc, kAMFObject);
-            put_named_string(enc, "sampletype", "H264");
-            put_byte(enc, 0);
-            put_byte(enc, 0);
-            put_byte(enc, kAMFObjectEnd);
-            put_byte(enc, 0);
-            put_byte(enc, 0);
-            put_byte(enc, kAMFObjectEnd);
-        }
-//        put_be16(enc, 0);
-//        put_byte(enc, kAMFObjectEnd);
-        put_named_double(enc, "audiodatarate", 131152. / 1024.);
+        
+        put_named_double(enc, "audiodatarate", m_audioRate/1000.0);
         put_named_double(enc, "audiosamplerate", m_audioSampleRate);
         put_named_double(enc, "audiosamplesize", 16);
         put_named_double(enc, "audiochannels", m_audioStereo + 1);
@@ -629,18 +588,12 @@ namespace videocore
         size_t len = enc.size();
         
         
-        //        put_buff(outBuffer, (uint8_t*)&enc[0], static_cast<size_t>(len));
-        
-        
         metadata.msg_type_id = FLV_TAG_TYPE_META;
         metadata.msg_stream_id = kAudioChannelStreamId;
-        //        metadata.msg_length.data = static_cast<int>( outBuffer.size() );
         metadata.msg_length.data = static_cast<int>( len );
         metadata.timestamp.data = 0;
         
         sendPacket(&enc[0], len, metadata);
-        
-        //        sendPacket(&outBuffer[0], outBuffer.size(), metadata);
     }
     void
     RTMPSession::sendDeleteStream()
