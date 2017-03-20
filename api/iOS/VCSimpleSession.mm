@@ -62,7 +62,7 @@ static const int kUsingEnbededVideoSource = 0;
 static const int kUsingEnbededAudioSource = 1;
 
 static const int kMinVideoBitrate = 32000;
-static const int kMaxBufferedDuration = 15;
+static const int kMaxBufferedDuration = 2;
 
 static const int kDefaultAudioChannelCount = 2;
 static const float kDefaultAudioGain = 0.5f;
@@ -611,7 +611,7 @@ namespace videocore { namespace simpleApi {
     
     m_outputSession.reset(
                           new videocore::RTMPSession ( uri.str(),
-                                                      MAX(_maxSendBufferSize, (self.bitrate + self.audioBitRate) / 8),
+                                                      MAX(_maxSendBufferSize, kMaxBufferedDuration * (self.bitrate + self.audioBitRate) / 8),
                                                       [=](videocore::RTMPSession& session,
                                                           ClientState_t state) {
                                                           
