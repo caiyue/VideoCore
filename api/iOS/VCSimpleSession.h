@@ -54,8 +54,8 @@ typedef NS_ENUM(NSInteger, VCSessionState)
     VCSessionStateStarted,
     VCSessionStatePaused,
     VCSessionStateEnded,
-    VCSessionStateError
-
+    VCSessionStateError,
+    VCSessionStateBufferOverflow
 };
 
 typedef NS_ENUM(NSInteger, VCCameraState)

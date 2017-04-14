@@ -62,7 +62,7 @@ static const int kUsingEnbededVideoSource = 0;
 static const int kUsingEnbededAudioSource = 1;
 
 static const int kMinVideoBitrate = 32000;
-static const int kMaxBufferedDuration = 2;
+static const int kMaxBufferedDuration = 1;
 
 static const int kDefaultAudioChannelCount = 2;
 static const float kDefaultAudioGain = 0.5f;
@@ -636,6 +636,22 @@ namespace videocore { namespace simpleApi {
                                                                   break;
                                                               case kClientStateNotConnected:
                                                                   self.rtmpSessionState = VCSessionStateEnded;
+                                                                  break;
+                                                              case kClientStateBufferOverflow:
+                                                              {
+                                                                  if (NSOperationQueue.currentQueue != NSOperationQueue.mainQueue) {
+                                                                      dispatch_async(dispatch_get_main_queue(), ^{
+                                                                          // trigger in main thread, avoid autolayout engine exception
+                                                                          if(self.delegate) {
+                                                                              [self.delegate connectionStatusChanged:VCSessionStateBufferOverflow];
+                                                                          }
+                                                                      });
+                                                                  } else {
+                                                                      if (self.delegate) {
+                                                                          [self.delegate connectionStatusChanged:VCSessionStateBufferOverflow];
+                                                                      }
+                                                                  }
+                                                              }
                                                                   break;
                                                               default:
                                                                   break;

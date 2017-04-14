@@ -245,6 +245,10 @@ namespace videocore
             
             if(m_bufferSize > this->m_maxSendBufferSize && isKeyframe && msgType == RTMP_PT_VIDEO) {
                 m_clearing = true;
+                
+                if(NULL != m_callback) {
+                    m_callback(*this, kClientStateBufferOverflow);
+                }
             }
             
             if (m_clearing && (msgType == RTMP_PT_VIDEO || msgType == RTMP_PT_AUDIO)) {
