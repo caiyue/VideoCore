@@ -86,6 +86,15 @@ typedef NS_ENUM(NSInteger, VCConnectionQuality) {
     kVCConnectionQualityLow
 };
 
+#define kMinVideoBitrate  32000
+#define kMaxBufferedDuration  1
+
+#define kDefaultAudioChannelCount 2
+#define kDefaultAudioGain 0.5f
+#define kDefaultAudioSampleRate 44100
+#define kDefaultAudioBitRate 96000
+#define kDefaultAudioBytesPerChannel 2
+
 @protocol VCSessionDelegate <NSObject>
 @required
 - (void) connectionStatusChanged: (VCSessionState) sessionState;
@@ -103,6 +112,9 @@ typedef NS_ENUM(NSInteger, VCConnectionQuality) {
 @public
     std::shared_ptr<videocore::iOS::CameraSource> m_cameraSource;
     std::shared_ptr<videocore::iOS::MicSource> m_micSource;
+    
+    std::shared_ptr<videocore::ISource> m_extCameraSource;
+    std::shared_ptr<videocore::ISource> m_extMicSource;
 }
 @property (nonatomic, readonly) VCSessionState rtmpSessionState;
 @property (nonatomic, strong, readonly) UIView* previewView;
@@ -163,6 +175,16 @@ typedef NS_ENUM(NSInteger, VCConnectionQuality) {
            useInterfaceOrientation:(BOOL)useInterfaceOrientation
                        cameraState:(VCCameraState) cameraState
                         aspectMode:(VCAspectMode) aspectMode;
+
+// -----------------------------------------------------------------------------
+- (instancetype) initWithVideoSize:(CGSize)videoSize
+                         frameRate:(int)fps
+                           bitrate:(int)bps
+           useInterfaceOrientation:(BOOL)useInterfaceOrientation
+                       cameraState:(VCCameraState) cameraState
+                        aspectMode:(VCAspectMode)aspectMode
+                         extCamera:(std::shared_ptr<videocore::ISource>)extCamera
+                            extMic:(std::shared_ptr<videocore::ISource>)extMic;
 
 // -----------------------------------------------------------------------------
 
