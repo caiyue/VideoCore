@@ -727,9 +727,6 @@ namespace videocore { namespace simpleApi {
                                               if ([bSelf.delegate respondsToSelector:@selector(detectedThroughput:videoRate:)]) {
                                                   [bSelf.delegate detectedThroughput:predicted videoRate:video->bitrate()];
                                               }
-                                              if ([bSelf.delegate respondsToSelector:@selector(detectedThroughput:videoRate:insBytesPerSecond:)]) {
-                                                  [bSelf.delegate detectedThroughput:predicted videoRate:video->bitrate() insBytesPerSecond:inst];
-                                              }
                                               
                                               if ([bSelf.delegate respondsToSelector:@selector(detectedThroughput:videoRate:audioRate:insBytesPerSecond:)]) {
                                                   [bSelf.delegate detectedThroughput:predicted videoRate:video->bitrate() audioRate:audio->bitrate()insBytesPerSecond:inst];
@@ -747,14 +744,14 @@ namespace videocore { namespace simpleApi {
                                                       videoBr = video->bitrate();
 
                                                       if (audio) {
-
-                                                          if ( videoBr > 500000 ) {
-                                                              audio->setBitrate(128000);
-                                                          } else if (videoBr <= 500000 && videoBr > 250000) {
-                                                              audio->setBitrate(96000);
-                                                          } else {
-                                                              audio->setBitrate(80000);
-                                                          }
+                                                          audio->setBitrate(96000);
+//                                                          if ( videoBr > 500000 ) {
+//                                                              audio->setBitrate(128000);
+//                                                          } else if (videoBr <= 500000 && videoBr > 250000) {
+//                                                              audio->setBitrate(96000);
+//                                                          } else {
+//                                                              audio->setBitrate(80000);
+//                                                          }
                                                       }
 
 
